@@ -1,0 +1,15 @@
+spec_version: "0.1.0"
+name: proposaliq
+version: 1.0.0
+description: Enterprise RFP Response Agent — writes winning proposals
+model:
+  preferred: "openai:gpt-4o-mini@https://models.inference.ai.azure.com"
+  fallback: []
+  constraints:
+    max_tokens: 4096
+tools:
+  - read
+  - write
+  - memory
+runtime:
+  max_turns: 20

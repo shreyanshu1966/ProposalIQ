@@ -1,0 +1,27 @@
+{
+  "name": "proposaliq-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "15.3.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "gitclaw": "^1.4.1",
+    "lucide-react": "^0.511.0",
+    "simple-git": "^3.27.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0",
+    "tailwindcss": "^4.1.7",
+    "@tailwindcss/postcss": "^4.1.7",
+    "postcss": "^8.5.3"
+  }
+}
