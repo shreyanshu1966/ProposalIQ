@@ -1,18 +1,14 @@
-import { NextResponse } from "next/server";
-import { readMemory, readCompanyProfile } from "@/lib/agent";
+import { readMemory, readCompanyProfile, saveCompanyProfile } from "@/lib/agent";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const memory = readMemory();
-  const company = readCompanyProfile();
-  return NextResponse.json({ memory, company });
+  const [memory, company] = await Promise.all([readMemory(), readCompanyProfile()]);
+  return Response.json({ memory, company });
 }
 
 export async function PUT(req: Request) {
   const { company } = await req.json();
-  const fs = await import("fs");
-  const { COMPANY_FILE } = await import("@/lib/agent");
-  fs.writeFileSync(COMPANY_FILE, company, "utf-8");
-  return NextResponse.json({ ok: true });
+  await saveCompanyProfile(company);
+  return Response.json({ ok: true });
 }

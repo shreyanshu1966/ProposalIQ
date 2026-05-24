@@ -1,32 +1,22 @@
 import { NextRequest } from "next/server";
-import { readCompanyProfile, appendToMemory, AGENT_DIR } from "@/lib/agent";
-import fs from "fs";
-import path from "path";
+import { readCompanyProfile, readAgentFile, appendToMemory } from "@/lib/agent";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-function readAgentFile(filename: string): string {
-  try {
-    return fs.readFileSync(path.join(AGENT_DIR, filename), "utf-8");
-  } catch {
-    return "";
-  }
-}
-
 export async function POST(req: NextRequest) {
   const { rfpText, companyProfile } = await req.json();
-
   if (!rfpText?.trim()) {
     return new Response(JSON.stringify({ error: "RFP text is required" }), { status: 400 });
   }
 
-  const company = companyProfile?.trim() || readCompanyProfile();
-  const soul = readAgentFile("SOUL.md");
-  const rules = readAgentFile("RULES.md");
+  const [company, soul, rules] = await Promise.all([
+    companyProfile?.trim() || readCompanyProfile(),
+    readAgentFile("SOUL.md"),
+    readAgentFile("RULES.md"),
+  ]);
 
   const systemPrompt = `${soul}\n\n---\n\n${rules}`;
-
   const userPrompt = `You are responding to the following RFP on behalf of the company described below.
 
 ## Company Profile
@@ -49,15 +39,14 @@ Use [REVIEW NEEDED] for requirements that may be hard to meet.`;
   const encoder = new TextEncoder();
   const stream = new TransformStream();
   const writer = stream.writable.getWriter();
-
   const githubToken = process.env.OPENAI_API_KEY;
+
   if (!githubToken) {
-    return new Response(JSON.stringify({ error: "OPENAI_API_KEY (GitHub token) not set" }), { status: 500 });
+    return new Response(JSON.stringify({ error: "OPENAI_API_KEY not set" }), { status: 500 });
   }
 
   (async () => {
     let fullResponse = "";
-
     try {
       const res = await fetch("https://models.inference.ai.azure.com/chat/completions", {
         method: "POST",
@@ -89,11 +78,8 @@ Use [REVIEW NEEDED] for requirements that may be hard to meet.`;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = dec.decode(value);
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
+        for (const line of chunk.split("\n")) {
           if (!line.startsWith("data: ")) continue;
           const data = line.slice(6).trim();
           if (data === "[DONE]") continue;
@@ -110,7 +96,7 @@ Use [REVIEW NEEDED] for requirements that may be hard to meet.`;
 
       if (fullResponse) {
         const summary = rfpText.slice(0, 200).replace(/\n/g, " ");
-        appendToMemory(`**RFP:** ${summary}...\n**Response generated:** ${new Date().toLocaleString()}\n**Status:** Draft`);
+        await appendToMemory(`**RFP:** ${summary}...\n**Response generated:** ${new Date().toLocaleString()}\n**Status:** Draft`);
       }
 
       await writer.write(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));

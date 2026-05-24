@@ -1,7 +1,5 @@
 import { NextRequest } from "next/server";
-import { readCompanyProfile, AGENT_DIR } from "@/lib/agent";
-import fs from "fs";
-import path from "path";
+import { readCompanyProfile, readAgentFile } from "@/lib/agent";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -19,14 +17,12 @@ export interface RFPAnalysis {
 
 export async function POST(req: NextRequest) {
   const { rfpText } = await req.json();
-  if (!rfpText?.trim()) {
-    return Response.json({ error: "RFP text required" }, { status: 400 });
-  }
+  if (!rfpText?.trim()) return Response.json({ error: "RFP text required" }, { status: 400 });
 
-  const company = readCompanyProfile();
-  const rules = (() => {
-    try { return fs.readFileSync(path.join(AGENT_DIR, "RULES.md"), "utf-8"); } catch { return ""; }
-  })();
+  const [company, rules] = await Promise.all([
+    readCompanyProfile(),
+    readAgentFile("RULES.md"),
+  ]);
 
   const githubToken = process.env.OPENAI_API_KEY;
   if (!githubToken) return Response.json({ error: "No API key" }, { status: 500 });
@@ -70,14 +66,9 @@ Return this exact JSON structure:
       }),
     });
 
-    if (!res.ok) {
-      const err = await res.text();
-      return Response.json({ error: err }, { status: 500 });
-    }
-
+    if (!res.ok) return Response.json({ error: await res.text() }, { status: 500 });
     const data = await res.json();
-    const content = data.choices?.[0]?.message?.content;
-    const analysis: RFPAnalysis = JSON.parse(content);
+    const analysis: RFPAnalysis = JSON.parse(data.choices?.[0]?.message?.content);
     return Response.json(analysis);
   } catch (err) {
     return Response.json({ error: String(err) }, { status: 500 });
