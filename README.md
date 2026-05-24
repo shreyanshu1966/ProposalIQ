@@ -2,6 +2,8 @@
 
 > Built for the **Lyzr Builder Challenge** using GitAgent
 
+**Live Demo:** https://proposaliq-production-3e4c.up.railway.app/
+
 ProposalIQ is an AI agent that lives inside this GitHub repository. It reads RFPs (Requests for Proposal), scores compliance against your company profile, generates full proposal responses, and remembers every RFP outcome — all as real git commits.
 
 ## Architecture
